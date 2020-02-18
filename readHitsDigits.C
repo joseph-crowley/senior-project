@@ -18,6 +18,15 @@ void readHitsDigits()
   TH2F* hMultDig = new TH2F("hMultDig", "photons Digits ", 210, 0, 210, 500, 0, 20);
   TH2F* hTimeDig = new TH2F("hTimeDig", "Time Digits", 210, 0, 210, 100, -1, 1);
 
+  const Int_t NBINSx = 6;
+  Double_t edgesx[NBINSx + 1] = {-15,-10,-5,0,5,10,15};
+  const Int_t NBINSy = 6;
+  Double_t edgesy[NBINSy + 1] = {-15,-10,-5,0,5,10,15};
+
+
+  TH2F* joesHistogram = new TH2F("joesHistogram", "FT0 hits binned for PMT size", NBINSx, edgesx, NBINSy, edgesy);
+ 
+
   gDirectory = cwd;
 
   TFile* fhit = new TFile("o2sim.root");
@@ -25,7 +34,7 @@ void readHitsDigits()
   std::vector<o2::ft0::HitType>* hitArray = nullptr;
   hitTree->SetBranchAddress("FT0Hit", &hitArray);
   Int_t nevH = hitTree->GetEntries(); // hits are stored as one event per entry
-  // std::cout << "Found " << nevH << " events with hits " << std::endl;
+  std::cout << "Found " << nevH << " events with hits " << std::endl;
 
   Double_t hit_time[240];
   Int_t countE[240];
@@ -41,6 +50,7 @@ void readHitsDigits()
       hit_time[detID] = hit.GetTime();
       hTimeHitA->Fill(detID, hit_time[detID]);
       hTimeHitC->Fill(detID, hit_time[detID]);
+      joesHistogram->Fill(hit.GetX(), hit.GetY());
       countE[detID]++;
     }
     for (int ii = 0; ii < 208; ii++) {
@@ -57,7 +67,7 @@ void readHitsDigits()
   std::vector<o2::ft0::Digit>* digArr = new std::vector<o2::ft0::Digit>;
   digTree->SetBranchAddress("FT0Digit", &digArr);
   Int_t nevD = digTree->GetEntries(); // digits in cont. readout may be grouped as few events per entry
-  // std::cout << "Found " << nevD << " events with digits " << std::endl;
+  std::cout << "Found " << nevD << " events with digits " << std::endl;
   Float_t cfd[208], amp[208], part[208];
   for (Int_t iev = 0; iev < nevD; iev++) {
     digTree->GetEvent(iev);
@@ -68,10 +78,10 @@ void readHitsDigits()
       Double_t evtime = digit.getTime();
       for (const auto& d : digit.getChDgData()) {
         Int_t mcp = d.ChId;
-        cfd[mcp] = d.CFDTime - evtime - 12.5;
+        cfd[mcp] = d.CFDTime /*- evtime - 12.5*/;
         amp[mcp] = d.QTCAmpl;
         part[mcp] = d.numberOfParticles;
-        //     cout << iev << " " << mcp << " " << cfd[mcp] << " " << amp[mcp] << " " << part[mcp] << endl;
+        // cout << iev << " " << mcp << " " << cfd[mcp] << " " << amp[mcp] << " " << part[mcp] << endl;
         hMultDig->Fill(Float_t(mcp), amp[mcp]);
         hTimeDig->Fill(Float_t(mcp), cfd[mcp]);
       }
@@ -87,6 +97,7 @@ void readHitsDigits()
   hMultHit->Write();
   hTimeDig->Write();
   hMultDig->Write();
+  joesHistogram->Write();
 
 } // end of macro
 #endif
